@@ -2,6 +2,7 @@
 
 namespace App\Integrations;
 
+use App\Services\SupportedCountriesService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Http;
@@ -147,6 +148,12 @@ class IQAirIntegration
         }
 
         return $resContent;
+    }
+
+    public function initDataIntegration(){
+        $this->setSupportedCountries();
+        $supportedCountriesService = new SupportedCountriesService();
+        $supportedCountriesService->refreshSupportedCountriesData($this->getCountries());
     }
 
 }

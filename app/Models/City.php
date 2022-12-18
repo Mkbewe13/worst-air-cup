@@ -11,6 +11,17 @@ class City extends Model
 
     protected $fillable = [
         'name',
-        'air_condition_index'
+        'air_condition_index',
+        'country_id',
+        'state_id'
     ];
+
+    public function country(){
+        return $this->belongsTo(SupportedCountry::class);
+    }
+
+    public function state(){
+        return $this->belongsTo(SupportedState::class);
+    }
+
 }
