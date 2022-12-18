@@ -3,7 +3,7 @@
 namespace App\Integrations;
 
 use GuzzleHttp\Client;
-use http\Client\Request;
+use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Http;
 use mysql_xdevapi\Exception;
 
@@ -25,13 +25,8 @@ class IQAirIntegration
 
     private function setSupportedCountries()
     {
-        $response = $this->httpClient->get('http://api.airvisual.com/v2/countries?key=' . $this->getApiKey());
-        $responseContent = $response->getBody()->getContents();
 
-        //@todo validate request
-
-        $supportedCitiesArray = json_decode($responseContent);
-
+        $supportedCitiesArray = $this->getResponse('http://api.airvisual.com/v2/countries?key=' . $this->getApiKey());
         if (empty($supportedCitiesArray->data)) {
             return;
         }
@@ -63,13 +58,8 @@ class IQAirIntegration
         if (!$this->validateCountry($country)) {
             throw new \Exception('Given country is not supported or given name is wrong. Try with proper english country name');
         }
-        sleep(3);
-        $response = $this->httpClient->get('http://api.airvisual.com/v2/states?country=' . $country . '&key=' . $this->getApiKey());
-        $responseContent = $response->getBody()->getContents();
 
-        //@todo validate request
-
-        $supportedStatesArray = json_decode($responseContent);
+        $supportedStatesArray = $this->getResponse('http://api.airvisual.com/v2/states?country=' . $country . '&key=' . $this->getApiKey());
 
         if (empty($supportedStatesArray->data)) {
             throw new \Exception('There is no supported states for given country');
@@ -84,7 +74,7 @@ class IQAirIntegration
     }
 
 
-    private function getSupportedCitiesNamesByCountry(string $country): array
+    public function getSupportedCitiesNamesByCountry(string $country): array
     {
 
         if (!in_array($country, $this->supportedCountries)) {
@@ -94,11 +84,10 @@ class IQAirIntegration
         $supportedCities = [];
 
         $countryStates = $this->getSupportedStatesNamesByCountry('Poland');
-        sleep(3);
+        sleep(2);
         foreach ($countryStates as $state) {
-
-            $supportedCities[] = $this->getSupportedCountryCitiesByState($country, $state);
             sleep(2);
+            $supportedCities[] = $this->getSupportedCountryCitiesByState($country, $state);
         }
 
 
@@ -117,13 +106,8 @@ class IQAirIntegration
             throw new \Exception('Given country is not supported or given name is wrong. Try with proper english country name');
         }
 
-        $response = $this->httpClient->get('http://api.airvisual.com/v2/cities?state=' . $state . '&country=' . $country . '&key=' . $this->getApiKey());
-        $this->httpClient->sendAsync($response)->wait();
-        $responseContent = $response->getBody()->getContents();
-
-        //@todo validate request
         $result = [];
-        $supportedCitiesArray = json_decode($responseContent);
+        $supportedCitiesArray = $this->getResponse('http://api.airvisual.com/v2/cities?state=' . $state . '&country=' . $country . '&key=' . $this->getApiKey());
 
         foreach ($supportedCitiesArray as $item){
            $result[] = $item->city;
@@ -148,7 +132,21 @@ class IQAirIntegration
     }
 
     public function getCountries(): array{
-        return $this->getCountries();
+        return $this->supportedCountries;
+    }
+
+    private function getResponse(string $httpUrl): \stdClass
+    {
+        try {
+            $request = new Request('GET', $httpUrl);
+            $response = $this->httpClient->sendAsync($request)->wait();
+            $resContent = $response->getBody()->getContents();
+            $resContent = json_decode($resContent);
+        } catch (\Exception $e) {
+            throw new \Exception('An error occurred while taking response from IQAIR web api. Error: ' . $e);
+        }
+
+        return $resContent;
     }
 
 }

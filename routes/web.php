@@ -14,5 +14,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
+    $iqAir = new \App\Integrations\IQAirIntegration();
+    dd($iqAir->getSupportedCitiesNamesByCountry('Poland'));
     return view('welcome');
 });
