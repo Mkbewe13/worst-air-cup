@@ -17,11 +17,11 @@ class City extends Model
     ];
 
     public function country(){
-        return $this->belongsTo(SupportedCountry::class);
+        return $this->belongsTo(Country::class);
     }
 
     public function state(){
-        return $this->belongsTo(SupportedState::class);
+        return $this->belongsTo(State::class);
     }
 
 }

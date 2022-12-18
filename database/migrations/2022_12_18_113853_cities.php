@@ -18,7 +18,7 @@ return new class extends Migration
            $table->string('name');
            $table->integer('country_id');
            $table->integer('state_id');
-           $table->string('air_condition_index');
+           $table->string('air_condition_index')->nullable();
            $table->timestamps();
 
         });
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down()
     {
-        //
+        Schema::dropIfExists('cities');
     }
 };

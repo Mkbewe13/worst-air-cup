@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    $iqAir = new \App\Integrations\IQAirIntegration();
-    $iqAir->initDataIntegration();
-    return view('welcome');
-});
+Route::get('/',[\App\Http\Controllers\StartController::class,'welcome'])->name('welcome');
+
+Route::get('/cities/{country_name}',[\App\Http\Controllers\CitiesController::class,'index'])->name('city.index');

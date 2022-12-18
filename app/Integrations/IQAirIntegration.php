@@ -2,7 +2,8 @@
 
 namespace App\Integrations;
 
-use App\Services\SupportedCountriesService;
+use App\Services\CountriesService;
+use App\Services\StatesService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,6 @@ class IQAirIntegration
 {
 
    private Client $httpClient;
-   private array $supportedCountries = [];
 
     /**
      * @param Client $httpClient
@@ -20,21 +20,25 @@ class IQAirIntegration
     public function __construct()
     {
         $this->httpClient = new Client();
-        $this->setSupportedCountries();
     }
 
 
-    private function setSupportedCountries()
+    public function getSupportedCountries()
     {
+
+        $result = [];
 
         $supportedCitiesArray = $this->getResponse('http://api.airvisual.com/v2/countries?key=' . $this->getApiKey());
         if (empty($supportedCitiesArray->data)) {
-            return;
+            return $result;
         }
 
+
         foreach ($supportedCitiesArray->data as $item) {
-            $this->supportedCountries[] = $item->country;
+            $result[] = $item->country;
         }
+
+        return $result;
     }
 
     private function validateStatusCode( $status ){
@@ -54,7 +58,7 @@ class IQAirIntegration
         return $apiKey;
     }
 
-    private function getSupportedStatesNamesByCountry(string $country): array{
+    public function getSupportedStatesNamesByCountry(string $country): array{
 
         if (!$this->validateCountry($country)) {
             throw new \Exception('Given country is not supported or given name is wrong. Try with proper english country name');
@@ -101,17 +105,17 @@ class IQAirIntegration
 
     }
 
-    private function getSupportedCountryCitiesByState(string $country, string $state): array{
+    public function getSupportedCountryCitiesByState(string $country, string $state): array{
 
         if(!$this->validateCountry($country)){
             throw new \Exception('Given country is not supported or given name is wrong. Try with proper english country name');
         }
 
         $result = [];
-        $supportedCitiesArray = $this->getResponse('http://api.airvisual.com/v2/cities?state=' . $state . '&country=' . $country . '&key=' . $this->getApiKey());
+        $supportedCitiesArray = $this->getResponse('http://api.airvisual.com/v2/cities?state=' . $state . '&country=' . $country . '&key=' . $this->getApiKey(),true);
 
-        foreach ($supportedCitiesArray as $item){
-           $result[] = $item->city;
+        foreach ($supportedCitiesArray['data'] as $item){
+           $result[] = $item['city'];
         }
 
         return $result;
@@ -125,35 +129,24 @@ class IQAirIntegration
         return in_array($country,self::getSupportedCountries());
     }
 
-    private static function getSupportedCountries(): array
-    {
-        $IQAir = new IQAirIntegration();
-        $IQAir->setSupportedCountries();
-        return $IQAir->getCountries();
-    }
 
-    public function getCountries(): array{
-        return $this->supportedCountries;
-    }
-
-    private function getResponse(string $httpUrl): \stdClass
+    private function getResponse(string $httpUrl,bool $associative = false)
     {
         try {
             $request = new Request('GET', $httpUrl);
             $response = $this->httpClient->sendAsync($request)->wait();
             $resContent = $response->getBody()->getContents();
-            $resContent = json_decode($resContent);
+            if($associative === true){
+                $resContent = json_decode($resContent,true);
+            }else{
+                $resContent = json_decode($resContent);
+            }
+
         } catch (\Exception $e) {
             throw new \Exception('An error occurred while taking response from IQAIR web api. Error: ' . $e);
         }
 
         return $resContent;
-    }
-
-    public function initDataIntegration(){
-        $this->setSupportedCountries();
-        $supportedCountriesService = new SupportedCountriesService();
-        $supportedCountriesService->refreshSupportedCountriesData($this->getCountries());
     }
 
 }
